@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // ← Tambahkan import Link
 import { getUser, isAuthenticated } from '@/lib/auth';
 
 interface User {
@@ -55,7 +56,7 @@ export default function Home() {
                     Transparansi Kopi Kerinci dari Petani ke Dunia
                 </p>
 
-                <div className="flex justify-center gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
                     <a
                         href="/login"
                         className="rounded-lg bg-green-600 px-8 py-3 font-bold text-white transition hover:bg-green-700"
@@ -69,6 +70,14 @@ export default function Home() {
                     >
                         Daftar
                     </a>
+
+                    {/* ← TAMBAHKAN TOMBOL SCAN QR CODE */}
+                    <Link
+                        href="/scan"
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                    >
+                        🔍 Scan QR Code
+                    </Link>
                 </div>
 
                 {isClient && authenticated && user && (

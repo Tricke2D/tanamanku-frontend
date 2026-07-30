@@ -22,6 +22,8 @@ export default function ExporterBatchPage() {
     const [filter, setFilter] = useState('new');
 
     useEffect(() => {
+        console.log('🔍 useEffect triggered on list page');
+        console.log('📡 Current filter:', filter);
         fetchBatches();
     }, [filter]);
 
@@ -30,12 +32,22 @@ export default function ExporterBatchPage() {
             setLoading(true);
             setError('');
             const query = filter ? `?status=${filter}` : '';
-            const response = await apiCall(`/api/exporter/batches${query}`);
+            const url = `/api/exporter/batches${query}`;
+
+            console.log(`📡 Fetching: ${url}`);
+
+            const response = await apiCall(url);
+
+            console.log('✅ Response received:', response);
+            console.log('📦 Batches count:', response.batches?.length || 0);
+
             setBatches(response.batches || []);
         } catch (err: any) {
-            setError(err.message);
+            console.error('❌ Fetch error:', err);
+            setError(err.message || 'Failed to load batches');
         } finally {
             setLoading(false);
+            console.log('✅ fetchBatches completed');
         }
     };
 
@@ -47,39 +59,83 @@ export default function ExporterBatchPage() {
                 return 'bg-yellow-100 text-yellow-700';
             case 'passed':
                 return 'bg-green-100 text-green-700';
+            case 'rejected':
+                return 'bg-red-100 text-red-700';
+            case 'exported':
+                return 'bg-purple-100 text-purple-700';
             default:
                 return 'bg-gray-100 text-gray-700';
         }
     };
 
+    // Loading state dengan spinner
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-blue-50 p-6">
+                <div className="max-w-6xl mx-auto">
+                    <h1 className="text-3xl font-bold text-blue-700 mb-6">📦 Batch Pipeline</h1>
+                    <div className="bg-white p-8 rounded-lg shadow text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                        <p className="text-gray-500">Loading batches...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state dengan retry button
+    if (error) {
+        return (
+            <div className="min-h-screen bg-blue-50 p-6">
+                <div className="max-w-6xl mx-auto">
+                    <h1 className="text-3xl font-bold text-blue-700 mb-6">📦 Batch Pipeline</h1>
+                    <div className="bg-red-100 border border-red-400 p-6 rounded-lg text-red-700">
+                        <p className="font-bold">❌ Error:</p>
+                        <p>{error}</p>
+                        <button
+                            onClick={() => fetchBatches()}
+                            className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-blue-50 p-6">
             <div className="max-w-6xl mx-auto">
+                <Link href="/exporter" className="text-blue-600 hover:text-blue-700 font-bold mb-4 inline-block">
+                    ← Kembali ke Dashboard
+                </Link>
+
                 <h1 className="text-3xl font-bold text-blue-700 mb-6">📦 Batch Pipeline</h1>
 
                 {/* Filters */}
                 <div className="mb-6 flex gap-2 flex-wrap">
-                    {['new', 'testing', 'passed', 'exported'].map((status) => (
+                    {['new', 'testing', 'passed', 'rejected', 'exported'].map((status) => (
                         <button
                             key={status}
-                            onClick={() => setFilter(status)}
+                            onClick={() => {
+                                console.log(`🔍 Filter changed to: ${status}`);
+                                setFilter(status);
+                            }}
                             className={`px-4 py-2 rounded font-bold transition ${
-                                filter === status ? 'bg-blue-600 text-white' : 'bg-white border-2 border-gray-300'
+                                filter === status ? 'bg-blue-600 text-white' : 'bg-white border-2 border-gray-300 hover:border-blue-400'
                             }`}
                         >
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {status === 'exported' ? '🚚 Exported' : status.charAt(0).toUpperCase() + status.slice(1)}
                         </button>
                     ))}
                 </div>
 
                 {/* Batches Table */}
-                {loading ? (
-                    <div className="text-center py-8">Loading batches...</div>
-                ) : error ? (
-                    <div className="bg-red-100 p-6 rounded text-red-700">{error}</div>
-                ) : batches.length === 0 ? (
-                    <div className="bg-white p-8 rounded text-center">
+                {batches.length === 0 ? (
+                    <div className="bg-white p-8 rounded shadow text-center">
                         <p className="text-gray-500">No batches with status "{filter}"</p>
+                        <p className="text-sm text-gray-400 mt-2">Try changing the filter or create a new batch.</p>
                     </div>
                 ) : (
                     <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -97,27 +153,28 @@ export default function ExporterBatchPage() {
                             </thead>
                             <tbody>
                             {batches.map((batch, i) => (
-                                <tr key={batch.id} className={`border-b ${i % 2 === 0 ? 'bg-gray-50' : ''}`}>
+                                <tr key={batch.id} className={`border-b ${i % 2 === 0 ? 'bg-gray-50' : ''} hover:bg-blue-50`}>
                                     <td className="px-6 py-4 font-bold text-blue-700 font-mono">{batch.batch_code}</td>
                                     <td className="px-6 py-4">{batch.farm_name}</td>
                                     <td className="px-6 py-4 text-sm">{new Date(batch.harvest_date).toLocaleDateString('id-ID')}</td>
                                     <td className="px-6 py-4">{batch.quantity_kg}</td>
                                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded font-bold text-sm ${
-                          batch.quality_grade === 'A' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {batch.quality_grade}
-                      </span>
+                                            <span className={`px-3 py-1 rounded font-bold text-sm ${
+                                                batch.quality_grade === 'A' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                                {batch.quality_grade}
+                                            </span>
                                     </td>
                                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded font-bold text-sm ${statusColor(batch.status)}`}>
-                        {batch.status}
-                      </span>
+                                            <span className={`px-3 py-1 rounded font-bold text-sm ${statusColor(batch.status)}`}>
+                                                {batch.status}
+                                            </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <Link
                                             href={`/exporter/batches/${batch.id}`}
                                             className="text-blue-600 hover:text-blue-700 font-bold"
+                                            onClick={() => console.log(`🔗 Navigating to: /exporter/batches/${batch.id}`)}
                                         >
                                             View →
                                         </Link>

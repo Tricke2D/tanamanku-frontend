@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiCall } from '@/lib/api';
+import Link from 'next/link';
 
 interface HarvestFormData {
     harvest_date: string;
@@ -43,7 +44,6 @@ export default function LogHarvestPage() {
         setLoading(true);
 
         try {
-            // Validate
             if (!formData.quantity_kg || parseFloat(formData.quantity_kg) <= 0) {
                 throw new Error('Quantity harus lebih dari 0');
             }
@@ -59,22 +59,27 @@ export default function LogHarvestPage() {
                 }),
             });
 
-            console.log('Batch created:', response);
+            console.log('✅ Batch created:', response);
+
+            // Store QR data untuk ditampilkan
             setBatchCode(response.batch.batch_code);
             setQrCode(response.batch.qr_code_url);
             setSuccess(true);
 
-            // Reset form after 3 seconds
+            // ← KEY FIX: Reset form IMMEDIATELY (no setTimeout delay!)
+            setFormData({
+                harvest_date: new Date().toISOString().split('T')[0],
+                quantity_kg: '',
+                quality_grade: 'A',
+                weather_condition: 'sunny',
+                pest_notes: '',
+            });
+
+            // Hide success message after 3 seconds
             setTimeout(() => {
-                setFormData({
-                    harvest_date: new Date().toISOString().split('T')[0],
-                    quantity_kg: '',
-                    quality_grade: 'A',
-                    weather_condition: 'sunny',
-                    pest_notes: '',
-                });
                 setSuccess(false);
             }, 3000);
+
         } catch (err: any) {
             console.error('Error:', err);
             setError(err.message || 'Gagal log harvest');
@@ -86,6 +91,11 @@ export default function LogHarvestPage() {
     return (
         <div className="min-h-screen bg-green-50 p-6">
             <div className="max-w-2xl mx-auto">
+                {/* Back Button */}
+                <Link href="/farmer" className="text-green-600 hover:text-green-700 font-bold mb-4 inline-block">
+                    ← Kembali ke Dashboard
+                </Link>
+
                 <h1 className="text-3xl font-bold text-green-700 mb-6">📋 Log New Harvest</h1>
 
                 {success && qrCode && (

@@ -17,15 +17,15 @@ interface Batch {
 
 export default function BatchListPage() {
     const router = useRouter();
+
+    // All useState declarations first
     const [batches, setBatches] = useState<Batch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [filter, setFilter] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
-    useEffect(() => {
-        fetchBatches();
-    }, [filter]);
-
+    // Function declarations
     const fetchBatches = async () => {
         try {
             setLoading(true);
@@ -41,8 +41,36 @@ export default function BatchListPage() {
         }
     };
 
+    const handleDelete = async (batchId: number, batchCode: string) => {
+        if (!confirm(`Delete batch ${batchCode}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            setDeleteLoading(batchId);
+            await apiCall(`/api/farmer/batches/${batchId}`, { method: 'DELETE' });
+
+            // Remove from list
+            setBatches(batches.filter(b => b.id !== batchId));
+            alert('Batch deleted successfully');
+        } catch (err: any) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            setDeleteLoading(null);
+        }
+    };
+
+    // useEffect after function declarations
+    useEffect(() => {
+        fetchBatches();
+    }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
     return (
         <div className="min-h-screen bg-green-50 p-6">
+            <Link href="/farmer" className="text-green-600 hover:text-green-700 font-bold mb-4 inline-block">
+                ← Kembali ke Dashboard
+            </Link>
+
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
@@ -140,40 +168,51 @@ export default function BatchListPage() {
                                     </td>
                                     <td className="px-6 py-4 text-sm font-semibold">{batch.quantity_kg}</td>
                                     <td className="px-6 py-4">
-                      <span
-                          className={`px-3 py-1 rounded text-sm font-bold ${
-                              batch.quality_grade === 'A'
-                                  ? 'bg-green-100 text-green-700'
-                                  : batch.quality_grade === 'B'
-                                      ? 'bg-yellow-100 text-yellow-700'
-                                      : 'bg-orange-100 text-orange-700'
-                          }`}
-                      >
-                        {batch.quality_grade}
-                      </span>
+                                      <span
+                                          className={`px-3 py-1 rounded text-sm font-bold ${
+                                              batch.quality_grade === 'A'
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : batch.quality_grade === 'B'
+                                                      ? 'bg-yellow-100 text-yellow-700'
+                                                      : 'bg-orange-100 text-orange-700'
+                                          }`}
+                                      >
+                                        {batch.quality_grade}
+                                      </span>
                                     </td>
                                     <td className="px-6 py-4">
-                      <span
-                          className={`px-3 py-1 rounded text-sm font-bold ${
-                              batch.status === 'new'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : batch.status === 'testing'
-                                      ? 'bg-yellow-100 text-yellow-700'
-                                      : batch.status === 'passed'
-                                          ? 'bg-green-100 text-green-700'
-                                          : 'bg-purple-100 text-purple-700'
-                          }`}
-                      >
-                        {batch.status}
-                      </span>
+                                      <span
+                                          className={`px-3 py-1 rounded text-sm font-bold ${
+                                              batch.status === 'new'
+                                                  ? 'bg-blue-100 text-blue-700'
+                                                  : batch.status === 'testing'
+                                                      ? 'bg-yellow-100 text-yellow-700'
+                                                      : batch.status === 'passed'
+                                                          ? 'bg-green-100 text-green-700'
+                                                          : 'bg-purple-100 text-purple-700'
+                                          }`}
+                                      >
+                                        {batch.status}
+                                      </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <Link
-                                            href={`/farmer/batches/${batch.id}`}
-                                            className="text-green-600 hover:text-green-700 font-bold text-sm"
-                                        >
-                                            View Details →
-                                        </Link>
+                                        <div className="flex gap-2">
+                                            <Link
+                                                href={`/farmer/batches/${batch.id}`}
+                                                className="text-green-600 hover:text-green-700 font-bold text-sm"
+                                            >
+                                                View Details →
+                                            </Link>
+                                            {batch.status === 'new' && (
+                                                <button
+                                                    onClick={() => handleDelete(batch.id, batch.batch_code)}
+                                                    disabled={deleteLoading === batch.id}
+                                                    className="text-red-600 hover:text-red-700 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {deleteLoading === batch.id ? 'Deleting...' : 'Delete'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
